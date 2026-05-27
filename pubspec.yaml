@@ -1,7 +1,15 @@
 name: linguaflow
 description: "AI-powered localization for Flutter apps. Runtime language switching, JSON translations, and automatic AI translation of missing keys."
 version: 0.1.0
-homepage: https://github.com/ambitmisra/linguaflow
+homepage: https://github.com/invins2003/linguaflow
+repository: https://github.com/invins2003/linguaflow
+issue_tracker: https://github.com/invins2003/linguaflow/issues
+topics:
+  - localization
+  - i18n
+  - translation
+  - ai
+  - flutter
 
 environment:
   sdk: ^3.12.0
