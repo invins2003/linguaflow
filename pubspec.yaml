@@ -1,0 +1,27 @@
+name: linguaflow
+description: "AI-powered localization for Flutter apps. Runtime language switching, JSON translations, and automatic AI translation of missing keys."
+version: 0.1.0
+homepage: https://github.com/ambitmisra/linguaflow
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+  shared_preferences: ^2.3.0
+  provider: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+executables:
+  generate: lib/src/cli/generate_translations
+  setup: lib/src/cli/setup
+
+flutter:
+  # Assets are declared in the consuming app, not the package itself.

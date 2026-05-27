@@ -1,0 +1,13 @@
+{
+  "app_title": "LinguaFlow Demo",
+  "welcome": "Welcome Back",
+  "select_language": "Select Language",
+  "current_language": "Current Language",
+  "hello": "Hello",
+  "translate_missing": "Translate Missing Key",
+  "missing_key_demo": "This key is not pre-translated — watch AI handle it!",
+  "settings": "Settings",
+  "logout": "Logout",
+  "save": "Save",
+  "cancel": "Cancel"
+}

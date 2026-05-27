@@ -1,0 +1,21 @@
+name: linguaflow_example
+description: Example app demonstrating LinguaFlow — AI-powered localization.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  linguaflow:
+    path: ../
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/lang/en.json
+    - assets/lang/hi.json
+    - assets/lang/fr.json

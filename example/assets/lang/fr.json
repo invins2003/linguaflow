@@ -1,0 +1,13 @@
+{
+  "app_title": "Démo LinguaFlow",
+  "welcome": "Bon retour",
+  "select_language": "Choisir la langue",
+  "current_language": "Langue actuelle",
+  "hello": "Bonjour",
+  "translate_missing": "Traduire la clé manquante",
+  "missing_key_demo": "Cette clé n'est pas pré-traduite — regardez l'IA gérer ça!",
+  "settings": "Paramètres",
+  "logout": "Déconnexion",
+  "save": "Enregistrer",
+  "cancel": "Annuler"
+}
