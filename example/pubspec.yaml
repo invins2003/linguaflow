@@ -19,3 +19,4 @@ flutter:
     - assets/lang/en.json
     - assets/lang/hi.json
     - assets/lang/fr.json
+    - assets/linguaflow_config.json

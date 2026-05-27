@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:linguaflow/src/services/ai/ai_provider.dart';
 import 'package:linguaflow/src/services/ai/openai_provider.dart';
 import 'package:linguaflow/src/services/ai/gemini_provider.dart';
@@ -95,6 +96,49 @@ class AiProviderFactory {
       return create(type: type, apiKey: apiKey, model: model, endpoint: endpoint);
     } catch (e) {
       throw Exception('[LinguaFlow] Failed to read config "$configPath": $e');
+    }
+  }
+
+  // ── From Flutter assets (mobile / web) ─────────────────────────────────
+
+  /// Reads provider config from a Flutter asset file.
+  ///
+  /// Works on **all platforms** (Android, iOS, web, desktop) because it uses
+  /// `rootBundle` instead of `dart:io`.
+  ///
+  /// Add the config file to your app's assets:
+  /// ```yaml
+  /// # pubspec.yaml
+  /// flutter:
+  ///   assets:
+  ///     - assets/linguaflow_config.json
+  /// ```
+  ///
+  /// ⚠️  Only use this for keys that are safe to bundle in the APK/IPA
+  ///     (e.g. LibreTranslate with no key, or a restricted read-only key).
+  ///     Prefer `--dart-define` for sensitive API keys.
+  ///
+  /// Returns `null` if the asset is not found.
+  static Future<AiProvider?> fromFlutterAssets({
+    String assetPath = 'assets/linguaflow_config.json',
+  }) async {
+    try {
+      final raw = await rootBundle.loadString(assetPath);
+      final cfg = jsonDecode(raw) as Map<String, dynamic>;
+
+      final typeStr = cfg['provider'] as String? ?? '';
+      final apiKey = cfg['apiKey'] as String? ?? '';
+      final model = cfg['model'] as String?;
+      final endpoint = cfg['endpoint'] as String?;
+
+      final type = AiProviderType.values.firstWhere(
+        (t) => t.name == typeStr,
+        orElse: () => AiProviderType.libretranslate,
+      );
+
+      return create(type: type, apiKey: apiKey, model: model, endpoint: endpoint);
+    } catch (_) {
+      return null; // asset not present — silently skip
     }
   }
 
