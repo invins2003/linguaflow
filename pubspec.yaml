@@ -20,8 +20,8 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 executables:
-  generate: lib/src/cli/generate_translations
-  setup: lib/src/cli/setup
+  generate:
+  setup:
 
 flutter:
   # Assets are declared in the consuming app, not the package itself.

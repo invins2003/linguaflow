@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:linguaflow/src/services/ai/ai_provider.dart';
 import 'package:linguaflow/src/core/constants.dart';
@@ -127,6 +126,7 @@ class NvidiaProvider extends AiProvider {
   }
 
   void _log(String message) {
-    if (_logging) debugPrint('${LinguaFlowConstants.tag} $message');
+    // ignore: avoid_print
+    if (_logging) print('${LinguaFlowConstants.tag} $message');
   }
 }
