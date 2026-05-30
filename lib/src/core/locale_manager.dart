@@ -8,13 +8,6 @@ import 'package:linguaflow/src/services/file_loader.dart';
 import 'package:linguaflow/src/services/storage_service.dart';
 
 /// Central manager for locale state.
-///
-/// Responsibilities:
-/// - Stores the current locale
-/// - Loads JSON translations from assets
-/// - Switches locale at runtime and persists the choice
-/// - Falls back to AI translation for missing keys
-/// - Notifies listeners so the UI rebuilds
 class LocaleManager extends ChangeNotifier {
   final LocaleConfig config;
   final TranslationStore _store;
@@ -23,6 +16,10 @@ class LocaleManager extends ChangeNotifier {
 
   Locale _locale;
   bool _initialized = false;
+
+  static const _rtlLanguages = {
+    'ar', 'he', 'fa', 'ur', 'yi', 'ps', 'sd', 'ug',
+  };
 
   LocaleManager({
     required this.config,
@@ -34,22 +31,33 @@ class LocaleManager extends ChangeNotifier {
   Locale get locale => _locale;
   bool get isInitialized => _initialized;
 
+  /// Whether the current locale is right-to-left.
+  bool get isRtl => _rtlLanguages.contains(_locale.languageCode);
+
+  /// Text direction for the current locale — use with [Directionality].
+  TextDirection get textDirection =>
+      isRtl ? TextDirection.rtl : TextDirection.ltr;
+
   // ── Initialization ────────────────────────────────────────────────────────
 
-  /// Loads translations for all supported locales and restores the saved locale.
   Future<void> init() async {
     await _cache.init();
 
-    // Load every supported locale's JSON file.
     for (final code in config.supportedLocales) {
       final data = await FileLoader.load(config.assetPath, code);
       if (data.isNotEmpty) _store.load(code, data);
     }
 
-    // Restore previously chosen locale.
     final saved = await StorageService.loadLocale();
     if (saved != null && config.supportedLocales.contains(saved)) {
       _locale = Locale(saved);
+    } else if (config.autoDetectLocale) {
+      final detected = _detectDeviceLocale();
+      if (detected != null) {
+        _locale = Locale(detected);
+        await StorageService.saveLocale(detected);
+        _log('Auto-detected locale: $detected');
+      }
     }
 
     _initialized = true;
@@ -59,7 +67,6 @@ class LocaleManager extends ChangeNotifier {
 
   // ── Locale switching ──────────────────────────────────────────────────────
 
-  /// Switches to [code] (e.g. 'hi'), persists the choice, and rebuilds the UI.
   Future<void> setLocale(String code) async {
     if (!config.supportedLocales.contains(code)) {
       _log('Unsupported locale "$code". Ignoring.');
@@ -75,69 +82,80 @@ class LocaleManager extends ChangeNotifier {
 
   // ── Translation lookup ────────────────────────────────────────────────────
 
-  /// Returns the translation for [key] in the current locale.
+  /// Async translation with AI fallback for missing keys.
   ///
-  /// Resolution order:
-  /// 1. In-memory translation store
-  /// 2. Persistent AI cache (SharedPreferences)
-  /// 3. AI provider (if configured) → cached + stored → returned
-  /// 4. Fallback locale
-  /// 5. The raw key itself
-  Future<String> translate(String key) async {
+  /// Pass [args] to substitute `{placeholders}`:
+  /// ```dart
+  /// manager.translate('welcome_user', args: {'name': 'Ambit'})
+  /// ```
+  Future<String> translate(String key, {Map<String, String>? args}) async {
     final code = _locale.languageCode;
 
-    // 1. In-memory store.
     final stored = _store.get(code, key);
-    if (stored != null) return stored;
+    if (stored != null) return _interpolate(stored, args);
 
-    // 2. Persistent cache.
     final cached = _cache.get(code, key);
     if (cached != null) {
-      _store.put(code, key, cached); // warm the in-memory store too
-      return cached;
+      _store.put(code, key, cached);
+      return _interpolate(cached, args);
     }
 
-    // 3. AI translation.
     if (_aiProvider != null) {
-      _log('Missing key: "$key". Auto-translating via AI...');
+      _log('Missing key: "$key" for locale "$code".');
       try {
-        final languageName = _languageName(code);
         final translated = await _aiProvider.translate(
           text: key,
-          targetLanguage: languageName,
+          targetLanguage: _languageName(code),
         );
         _store.put(code, key, translated);
         await _cache.put(code, key, translated);
         _log('AI translation cached: "$key" → "$translated"');
-        return translated;
+        return _interpolate(translated, args);
       } catch (e) {
         _log('AI translation failed for "$key": $e');
       }
     }
 
-    // 4. Fallback locale.
     final fallback = _store.get(config.fallbackLocale, key);
-    if (fallback != null) return fallback;
+    if (fallback != null) return _interpolate(fallback, args);
 
-    // 5. Return the raw key.
-    return key;
+    return _interpolate(key, args);
   }
 
-  // ── Synchronous shortcut ──────────────────────────────────────────────────
-
-  /// Returns an already-loaded translation synchronously.
-  /// Does NOT trigger AI — use [translate] for async AI fallback.
-  String translateSync(String key) {
+  /// Synchronous translation — does not trigger AI.
+  ///
+  /// Pass [args] to substitute `{placeholders}`:
+  /// ```dart
+  /// manager.translateSync('greeting', args: {'name': 'Ambit'})
+  /// ```
+  String translateSync(String key, {Map<String, String>? args}) {
     final code = _locale.languageCode;
-    return _store.get(code, key) ??
+    final result = _store.get(code, key) ??
         _cache.get(code, key) ??
         _store.get(config.fallbackLocale, key) ??
         key;
+    return _interpolate(result, args);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  /// Maps an ISO language code to its English display name for AI prompts.
+  String _interpolate(String text, Map<String, String>? args) {
+    if (args == null || args.isEmpty) return text;
+    var result = text;
+    args.forEach((k, v) => result = result.replaceAll('{$k}', v));
+    return result;
+  }
+
+  String? _detectDeviceLocale() {
+    try {
+      final deviceLocale =
+          WidgetsBinding.instance.platformDispatcher.locale;
+      final code = deviceLocale.languageCode;
+      if (config.supportedLocales.contains(code)) return code;
+    } catch (_) {}
+    return null;
+  }
+
   String _languageName(String code) {
     const names = {
       'en': 'English', 'hi': 'Hindi', 'fr': 'French',

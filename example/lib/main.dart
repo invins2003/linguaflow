@@ -18,14 +18,13 @@ void main() async {
         supportedLocales: ['en', 'hi', 'fr'],
         assetPath: 'assets/lang/',
         enableLogging: true,
+        autoDetectLocale: true,
       ),
       aiProvider: aiProvider,
       child: const MyApp(),
     ),
   );
 }
-
-// ── App shell — never rebuilds on locale change ───────────────────────────────
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -57,6 +56,7 @@ class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _fade;
   late final Animation<double> _opacity;
+  int _itemCount = 1;
 
   static const _languages = [
     ('English', 'en', '🇬🇧'),
@@ -70,7 +70,7 @@ class _HomePageState extends State<HomePage>
     _fade = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 220),
-    )..value = 1.0; // start fully visible
+    )..value = 1.0;
     _opacity = CurvedAnimation(parent: _fade, curve: Curves.easeInOut);
   }
 
@@ -80,21 +80,18 @@ class _HomePageState extends State<HomePage>
     super.dispose();
   }
 
-  /// Fade out → switch locale → fade in.
   Future<void> _switchLocale(String code) async {
     final manager = LinguaFlow.of(context);
     if (manager.locale.languageCode == code) return;
-
-    await _fade.reverse();                   // fade out (220ms)
+    await _fade.reverse();
     if (!mounted) return;
-    await manager.setLocale(code);           // swap translations
+    await manager.setLocale(code);
     if (!mounted) return;
-    await _fade.forward();                   // fade in (220ms)
+    await _fade.forward();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Consumer rebuilds only the content — not MaterialApp
     return Consumer<LocaleManager>(
       builder: (context, manager, _) {
         final code = manager.locale.languageCode;
@@ -188,6 +185,89 @@ class _HomePageState extends State<HomePage>
                   ),
                   const SizedBox(height: 32),
 
+                  // ── Interpolation demo ──────────────────────────────────
+                  _SectionCard(
+                    title: 'interpolation_demo'.tr(context),
+                    icon: Icons.format_quote,
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'welcome_user'.tr(context, args: {'name': 'Ambit'}),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '"welcome_user".tr(context, args: {\'name\': \'Ambit\'})',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(fontFamily: 'monospace'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Pluralization demo ──────────────────────────────────
+                  _SectionCard(
+                    title: 'plural_demo'.tr(context),
+                    icon: Icons.format_list_numbered,
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'item_count'.trPlural(context, count: _itemCount),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            IconButton.filled(
+                              icon: const Icon(Icons.remove),
+                              onPressed: _itemCount > 0
+                                  ? () => setState(() => _itemCount--)
+                                  : null,
+                            ),
+                            const SizedBox(width: 16),
+                            Text(
+                              '$_itemCount',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 16),
+                            IconButton.filled(
+                              icon: const Icon(Icons.add),
+                              onPressed: () => setState(() => _itemCount++),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── RTL badge ───────────────────────────────────────────
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.swap_horiz),
+                    title: const Text('Text direction'),
+                    trailing: Chip(
+                      label: Text(
+                        manager.isRtl ? 'RTL' : 'LTR',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      backgroundColor: manager.isRtl
+                          ? Colors.orange.shade100
+                          : Colors.green.shade100,
+                    ),
+                  ),
+                  const Divider(height: 32),
+
                   // ── AI missing-key demo ─────────────────────────────────
                   Card(
                     color: Theme.of(context).colorScheme.secondaryContainer,
@@ -268,6 +348,52 @@ class _HomePageState extends State<HomePage>
             child: const Text('Close'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Reusable section card ─────────────────────────────────────────────────────
+
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final Widget child;
+
+  const _SectionCard({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: color,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            child,
+          ],
+        ),
       ),
     );
   }

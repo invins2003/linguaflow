@@ -1,6 +1,7 @@
 {
   "app_title": "Démo LinguaFlow",
   "welcome": "Bon retour",
+  "welcome_user": "Bienvenue, {name}!",
   "select_language": "Choisir la langue",
   "current_language": "Langue actuelle",
   "hello": "Bonjour",
@@ -9,5 +10,9 @@
   "settings": "Paramètres",
   "logout": "Déconnexion",
   "save": "Enregistrer",
-  "cancel": "Annuler"
+  "cancel": "Annuler",
+  "interpolation_demo": "Interpolation",
+  "plural_demo": "Pluralisation",
+  "item_count_one": "Vous avez 1 article dans votre panier",
+  "item_count_other": "Vous avez {count} articles dans votre panier"
 }

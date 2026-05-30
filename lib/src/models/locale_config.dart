@@ -13,10 +13,15 @@ class LocaleConfig {
   /// Whether to log debug messages to the console.
   final bool enableLogging;
 
+  /// When true, LinguaFlow reads the device locale on first launch and
+  /// switches to it automatically if it is in [supportedLocales].
+  final bool autoDetectLocale;
+
   const LocaleConfig({
     this.fallbackLocale = 'en',
     required this.supportedLocales,
     this.assetPath = 'assets/lang/',
     this.enableLogging = true,
+    this.autoDetectLocale = true,
   });
 }

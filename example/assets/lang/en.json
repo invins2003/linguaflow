@@ -1,6 +1,7 @@
 {
   "app_title": "LinguaFlow Demo",
   "welcome": "Welcome Back",
+  "welcome_user": "Welcome, {name}!",
   "select_language": "Select Language",
   "current_language": "Current Language",
   "hello": "Hello",
@@ -9,5 +10,9 @@
   "settings": "Settings",
   "logout": "Logout",
   "save": "Save",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "interpolation_demo": "Interpolation",
+  "plural_demo": "Pluralization",
+  "item_count_one": "You have 1 item in your cart",
+  "item_count_other": "You have {count} items in your cart"
 }
