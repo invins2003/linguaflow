@@ -16,6 +16,10 @@ Runtime language switching · JSON translations · Automatic AI translation of m
 | Runtime language switching | ✅ |
 | JSON-based translations | ✅ |
 | `.tr(context)` extension | ✅ |
+| String interpolation (`{placeholders}`) | ✅ |
+| Pluralization (`trPlural`) | ✅ |
+| RTL language detection | ✅ |
+| Device locale auto-detection | ✅ |
 | Persist selected language | ✅ |
 | AI translation of missing keys | ✅ |
 | Translation caching | ✅ |
@@ -56,8 +60,10 @@ assets/
 ```json
 {
   "welcome": "Welcome Back",
+  "welcome_user": "Welcome, {name}!",
   "hello": "Hello",
-  "settings": "Settings"
+  "item_count_one": "You have 1 item",
+  "item_count_other": "You have {count} items"
 }
 ```
 
@@ -108,7 +114,6 @@ import 'package:linguaflow/linguaflow.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Reads .linguaflow_config.json saved by `dart run linguaflow:setup`
   final aiProvider =
       await AiProviderFactory.fromConfig() ?? AiProviderFactory.fromEnv();
 
@@ -117,6 +122,7 @@ void main() async {
       config: const LocaleConfig(
         fallbackLocale: 'en',
         supportedLocales: ['en', 'hi', 'fr'],
+        autoDetectLocale: true,   // switches to device locale on first launch
       ),
       aiProvider: aiProvider,
       child: const MyApp(),
@@ -135,6 +141,48 @@ void main() async {
 Text('welcome'.tr(context))
 ```
 
+### String interpolation
+
+Embed `{placeholders}` in your JSON values and pass `args` at call time:
+
+```json
+{ "welcome_user": "Welcome, {name}!" }
+```
+
+```dart
+Text('welcome_user'.tr(context, args: {'name': 'Ambit'}))
+// → "Welcome, Ambit!"
+```
+
+Multiple placeholders work the same way:
+
+```json
+{ "order_summary": "Order #{id} — {count} items" }
+```
+
+```dart
+'order_summary'.tr(context, args: {'id': '1042', 'count': '3'})
+// → "Order #1042 — 3 items"
+```
+
+### Pluralization
+
+Add `_one` and `_other` variants to your JSON:
+
+```json
+{
+  "item_count_one":   "You have 1 item",
+  "item_count_other": "You have {count} items"
+}
+```
+
+```dart
+'item_count'.trPlural(context, count: 1)   // → "You have 1 item"
+'item_count'.trPlural(context, count: 5)   // → "You have 5 items"
+```
+
+`{count}` is injected automatically. Pass extra `args` for additional placeholders.
+
 ### Switch language at runtime
 
 ```dart
@@ -142,6 +190,30 @@ LinguaFlow.of(context).setLocale('hi');
 ```
 
 The selected locale is **persisted automatically** — next app launch restores it.
+
+### Device locale auto-detection
+
+When `autoDetectLocale: true` (the default), LinguaFlow reads the device locale on first launch and activates it if it is in `supportedLocales`. Set it to `false` to always start with `fallbackLocale`.
+
+### RTL support
+
+```dart
+final manager = LinguaFlow.of(context);
+
+manager.isRtl          // true for Arabic, Hebrew, Farsi, Urdu and more
+manager.textDirection  // TextDirection.rtl or TextDirection.ltr
+```
+
+Use it with Flutter's `Directionality` widget:
+
+```dart
+Directionality(
+  textDirection: LinguaFlow.of(context).textDirection,
+  child: MyWidget(),
+)
+```
+
+RTL is detected automatically for: Arabic, Hebrew, Farsi, Urdu, Yiddish, Pashto, Sindhi, Uyghur.
 
 ### AI translation for missing keys (async)
 
@@ -157,6 +229,13 @@ Missing keys are automatically:
 1. Translated by AI
 2. Cached to disk
 3. Returned instantly on future calls
+
+Interpolation and pluralization work with `trAsync` and `trPluralAsync` too:
+
+```dart
+'welcome_user'.trAsync(context, args: {'name': 'Ambit'})
+'item_count'.trPluralAsync(context, count: 5)
+```
 
 ---
 
@@ -182,23 +261,11 @@ aiProvider: await AiProviderFactory.fromConfig()
 No config file needed. The key is baked into the binary at compile time.
 
 ```bash
-# OpenAI
 flutter run --dart-define=OPENAI_API_KEY=sk-...
-
-# Google Gemini
 flutter run --dart-define=GEMINI_API_KEY=AIza...
-
-# Anthropic Claude
 flutter run --dart-define=ANTHROPIC_API_KEY=sk-ant-...
-
-# NVIDIA NIM
 flutter run --dart-define=NVIDIA_API_KEY=nvapi-...
-
-# DeepL
 flutter run --dart-define=DEEPL_API_KEY=your-key:fx
-
-# LibreTranslate (public server — no key needed)
-flutter run
 ```
 
 ```dart
@@ -208,27 +275,13 @@ aiProvider: AiProviderFactory.fromEnv()
 ### Option C — Explicit provider (full control)
 
 ```dart
-// OpenAI
 aiProvider: OpenAiProvider(apiKey: 'sk-...')
-
-// Google Gemini
 aiProvider: GeminiProvider(apiKey: 'AIza...', model: 'gemini-2.0-flash')
-
-// Anthropic Claude
 aiProvider: ClaudeProvider(apiKey: 'sk-ant-...', model: 'claude-haiku-4-5-20251001')
-
-// NVIDIA NIM (LLaMA, Nemotron, Mixtral, and more)
 aiProvider: NvidiaProvider(apiKey: 'nvapi-...')
-aiProvider: NvidiaProvider(apiKey: 'nvapi-...', model: 'nvidia/llama-3.1-nemotron-70b-instruct')
-
-// DeepL (free tier key ends with :fx)
 aiProvider: DeepLProvider(apiKey: 'your-key:fx')
-
-// LibreTranslate — free, no key required on public servers
-aiProvider: LibreTranslateProvider()
-
-// LibreTranslate — self-hosted
-aiProvider: LibreTranslateProvider(endpoint: 'http://localhost:5000')
+aiProvider: LibreTranslateProvider()                              // free, no key
+aiProvider: LibreTranslateProvider(endpoint: 'http://localhost:5000') // self-hosted
 ```
 
 ---
@@ -254,6 +307,43 @@ Output:
 [LinguaFlow] ✓ Saved assets/lang/fr.json
 [LinguaFlow] Done.
 ```
+
+---
+
+## API Reference
+
+### String extensions
+
+| Method | Description |
+| --- | --- |
+| `'key'.tr(context)` | Synchronous translation |
+| `'key'.tr(context, args: {...})` | Synchronous with placeholder substitution |
+| `'key'.trAsync(context)` | Async — triggers AI for missing keys |
+| `'key'.trAsync(context, args: {...})` | Async with placeholder substitution |
+| `'key'.trPlural(context, count: n)` | Picks `_one` or `_other`, injects `{count}` |
+| `'key'.trPluralAsync(context, count: n)` | Async plural with AI fallback |
+
+### LocaleManager
+
+| Property / Method | Description |
+| --- | --- |
+| `locale` | Current `Locale` |
+| `isRtl` | `true` if the current language is right-to-left |
+| `textDirection` | `TextDirection.rtl` or `.ltr` |
+| `isInitialized` | `true` after translations are loaded |
+| `setLocale(code)` | Switch locale and persist the choice |
+| `translate(key)` | Async lookup with AI fallback |
+| `translateSync(key)` | Synchronous lookup, no AI |
+
+### LocaleConfig
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `supportedLocales` | required | List of locale codes your app supports |
+| `fallbackLocale` | `'en'` | Used when no saved locale is found |
+| `assetPath` | `'assets/lang/'` | Folder containing JSON files |
+| `enableLogging` | `true` | Print debug messages |
+| `autoDetectLocale` | `true` | Match device locale on first launch |
 
 ---
 
@@ -283,7 +373,7 @@ lib/
       │    ├── file_loader.dart           ← Loads JSON from assets
       │    └── storage_service.dart       ← Persists locale choice
       ├── extensions/
-      │    └── string_extension.dart     ← .tr() / .trAsync()
+      │    └── string_extension.dart     ← .tr() / .trAsync() / .trPlural()
       ├── widgets/
       │    └── linguaflow_provider.dart  ← Root widget + LinguaFlow accessor
       └── cli/
@@ -297,19 +387,19 @@ lib/
 .tr() called
     │
     ▼
-In-memory store ──found──▶ return translation
+In-memory store ──found──▶ interpolate → return
     │
    not found
     ▼
-Persistent cache ──found──▶ warm store → return
+Persistent cache ──found──▶ warm store → interpolate → return
     │
    not found
     ▼
-AI provider ──success──▶ cache + store → return
+AI provider ──success──▶ cache + store → interpolate → return
     │
    fail / no provider
     ▼
-Fallback locale ──found──▶ return
+Fallback locale ──found──▶ interpolate → return
     │
    not found
     ▼
@@ -331,8 +421,6 @@ Return raw key
 
 ### Bring your own provider
 
-Extend `AiProvider` to plug in any translation backend:
-
 ```dart
 class MyProvider extends AiProvider {
   @override
@@ -340,10 +428,16 @@ class MyProvider extends AiProvider {
     required String text,
     required String targetLanguage,
   }) async {
-    // call your API and return translated string
+    // call your API and return the translated string
   }
 }
 ```
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
